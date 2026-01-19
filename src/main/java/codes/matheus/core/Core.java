@@ -26,11 +26,7 @@ public final class Core {
                 running = false;
             }
 
-            try {
-                handler.execute();
-            } catch (Exception e) {
-                throw new RuntimeException("Critical error: " + e.getMessage());
-            }
+            handler.execute(input);
         }
         scanner.close();
     }
