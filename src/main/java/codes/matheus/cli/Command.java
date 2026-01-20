@@ -1,4 +1,4 @@
-package codes.matheus.cli.command;
+package codes.matheus.cli;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -10,22 +10,41 @@ import java.util.regex.Pattern;
 public final class Command {
 
     // static initializers
+
+    static {
+        getMap().put(Type.SYSTEM,     List.of("login", "exit", "open", "help"));
+        getMap().put(Type.NAVIGATION, List.of("cd", "ls", "find", "pwd"));
+        getMap().put(Type.IO,         List.of("mkdir", "cp", "mv", "rm", "print", "rename", "bulk-rename"));
+        getMap().put(Type.ENCODING,   List.of("crypto", "zip", "unzip"));
+        getMap().put(Type.ANALYSIS,   List.of("analyze", "stats"));
+
+    }
+
     public static @NotNull Command create(@NotNull String input) {
         @NotNull CommandParsed cmd = Parser.parse(input);
-        return new Command(input, cmd.action, cmd.args, cmd.flags);
+        @NotNull Type type = Type.fromAction(cmd.action);
+        return new Command(input, type, cmd.action, cmd.args, cmd.flags);
+    }
+
+    private static final @NotNull Map<Command.Type, List<String>> map = new HashMap<>();
+
+    public static @NotNull Map<Type, List<String>> getMap() {
+        return map;
     }
 
     // Objects
 
     private final @NotNull String input;
+    private final @NotNull Type type;
     private final @NotNull String action;
     private final @Nullable List<String> args;
     private final @Nullable Map<String, String> flags;
 
     // Constructor
 
-    Command(@NotNull String input, @NotNull String action, @Nullable List<String> args, @Nullable Map<String, String> flags) {
+    Command(@NotNull String input, @NotNull Type type, @NotNull String action, @Nullable List<String> args, @Nullable Map<String, String> flags) {
         this.input = input;
+        this.type = type;
         this.action = action;
         this.args = args;
         this.flags = flags;
@@ -37,6 +56,10 @@ public final class Command {
 
     public @NotNull String getInput() {
         return input;
+    }
+
+    public @NotNull Type getType() {
+        return type;
     }
 
     public @NotNull String getAction() {
@@ -54,8 +77,6 @@ public final class Command {
     public boolean hasFlag(@NotNull String key) {
         return flags != null && flags.containsKey(key);
     }
-
-//    public abstract void execute();
 
     @Override
     public @NotNull String toString() {
@@ -132,11 +153,20 @@ public final class Command {
         }
     }
 
-    enum Type {
+    public enum Type {
         SYSTEM,
         NAVIGATION,
         IO,
         ENCODING,
-        ANALYSIS
+        ANALYSIS;
+
+        public static @NotNull Type fromAction(@NotNull String action) {
+            for (@NotNull Map.Entry<Type, List<String>> entry : getMap().entrySet()) {
+                if (entry.getValue().contains(action.toLowerCase())) {
+                    return entry.getKey();
+                }
+            }
+            throw new RuntimeException("Type of command unknown: " + action);
+        }
     }
 }
