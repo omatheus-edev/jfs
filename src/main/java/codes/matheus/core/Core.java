@@ -33,6 +33,7 @@ public final class Core {
         System.out.println("Initializing system at: " + path);
 
         build.load(path);
+        System.out.println("Success loading tree...");
 
         if (build.getTree() != null) {
             @NotNull FileMetadata rootTarget = new FileMetadata(new File(path));

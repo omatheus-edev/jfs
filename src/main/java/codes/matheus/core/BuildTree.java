@@ -27,21 +27,30 @@ public final class BuildTree {
         @Nullable NaryTree.Node<FileMetadata> rootNode = tree.search(rootMeta);
 
         if (rootNode != null && root.isDirectory()) {
-            fillTree(root, rootNode);
+            fetchChildren(rootNode);
         }
     }
 
-    private void fillTree(@NotNull File parent, @NotNull NaryTree.Node<FileMetadata> parentNode) {
-        @NotNull File[] children = parent.listFiles();
-        if (children == null || tree ==  null) return;
+    public void fetchChildren(@NotNull NaryTree.Node<FileMetadata> parentNode) {
+        if (!parentNode.getChildren().isEmpty() || tree == null) {
+            return;
+        }
+
+        @NotNull String path = parentNode.getValue().getAbsolutePath();
+        @NotNull File parentFile = new File(path);
+        @NotNull File[] children = parentFile.listFiles();
+
+        if (children == null) {
+            return;
+        }
 
         for (@NotNull File child : children) {
-            @NotNull FileMetadata meta = new FileMetadata(child);
-            @NotNull NaryTree.Node<FileMetadata> node = tree.insert(parentNode, meta);
-
-            if (child.isDirectory()) {
-                fillTree(child, node);
+            if (child.getName().startsWith(".")) {
+                continue;
             }
+
+            @NotNull FileMetadata meta = new FileMetadata(child);
+            tree.insert(parentNode, meta);
         }
     }
 }

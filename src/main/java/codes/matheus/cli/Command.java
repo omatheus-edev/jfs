@@ -12,15 +12,6 @@ public final class Command {
 
     // static initializers
 
-    static {
-        getCommands().put(Type.SYSTEM,     List.of("login", "exit", "open", "help"));
-        getCommands().put(Type.NAVIGATION, List.of("cd", "ls", "find", "pwd"));
-        getCommands().put(Type.IO,         List.of("mkdir", "cp", "mv", "rm", "print", "rename", "bulk-rename"));
-        getCommands().put(Type.ENCODING,   List.of("crypto", "zip", "unzip"));
-        getCommands().put(Type.ANALYSIS,   List.of("analyze", "stats"));
-
-    }
-
     public static @NotNull Command create(@NotNull String input) {
         @NotNull CommandParsed cmd = Parser.parse(input);
         @NotNull Type type = Type.fromAction(cmd.action);
@@ -31,6 +22,14 @@ public final class Command {
 
     public static @NotNull Map<Type, List<String>> getCommands() {
         return commands;
+    }
+
+    static {
+        commands.put(Type.SYSTEM,     List.of("login", "exit", "open", "help"));
+        commands.put(Type.NAVIGATION, List.of("cd", "ls", "find", "pwd"));
+        commands.put(Type.IO,         List.of("mkdir", "cp", "mv", "rm", "print", "rename", "bulk-rename"));
+        commands.put(Type.ENCODING,   List.of("crypto", "zip", "unzip"));
+        commands.put(Type.ANALYSIS,   List.of("analyze", "stats"));
     }
 
     // Objects
