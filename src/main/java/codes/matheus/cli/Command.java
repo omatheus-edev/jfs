@@ -1,5 +1,6 @@
 package codes.matheus.cli;
 
+import codes.matheus.exceptions.CommandException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -12,11 +13,11 @@ public final class Command {
     // static initializers
 
     static {
-        getMap().put(Type.SYSTEM,     List.of("login", "exit", "open", "help"));
-        getMap().put(Type.NAVIGATION, List.of("cd", "ls", "find", "pwd"));
-        getMap().put(Type.IO,         List.of("mkdir", "cp", "mv", "rm", "print", "rename", "bulk-rename"));
-        getMap().put(Type.ENCODING,   List.of("crypto", "zip", "unzip"));
-        getMap().put(Type.ANALYSIS,   List.of("analyze", "stats"));
+        getCommands().put(Type.SYSTEM,     List.of("login", "exit", "open", "help"));
+        getCommands().put(Type.NAVIGATION, List.of("cd", "ls", "find", "pwd"));
+        getCommands().put(Type.IO,         List.of("mkdir", "cp", "mv", "rm", "print", "rename", "bulk-rename"));
+        getCommands().put(Type.ENCODING,   List.of("crypto", "zip", "unzip"));
+        getCommands().put(Type.ANALYSIS,   List.of("analyze", "stats"));
 
     }
 
@@ -26,10 +27,10 @@ public final class Command {
         return new Command(input, type, cmd.action, cmd.args, cmd.flags);
     }
 
-    private static final @NotNull Map<Command.Type, List<String>> map = new HashMap<>();
+    private static final @NotNull Map<Command.Type, List<String>> commands = new HashMap<>();
 
-    public static @NotNull Map<Type, List<String>> getMap() {
-        return map;
+    public static @NotNull Map<Type, List<String>> getCommands() {
+        return commands;
     }
 
     // Objects
@@ -50,9 +51,7 @@ public final class Command {
         this.flags = flags;
     }
 
-
     // Getters
-
 
     public @NotNull String getInput() {
         return input;
@@ -161,12 +160,12 @@ public final class Command {
         ANALYSIS;
 
         public static @NotNull Type fromAction(@NotNull String action) {
-            for (@NotNull Map.Entry<Type, List<String>> entry : getMap().entrySet()) {
+            for (@NotNull Map.Entry<Type, List<String>> entry : getCommands().entrySet()) {
                 if (entry.getValue().contains(action.toLowerCase())) {
                     return entry.getKey();
                 }
             }
-            throw new RuntimeException("Type of command unknown: " + action);
+            throw new CommandException("Type of command unknown: " + action);
         }
     }
 }
