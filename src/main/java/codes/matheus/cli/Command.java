@@ -72,6 +72,10 @@ public final class Command {
         return (flags != null) ? flags.get(key) : "";
     }
 
+    public boolean hasAnyCommand() {
+        return args != null && !args.isEmpty();
+    }
+
     public boolean hasFlag(@NotNull String key) {
         return flags != null && flags.containsKey(key);
     }

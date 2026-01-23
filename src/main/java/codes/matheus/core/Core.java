@@ -15,8 +15,8 @@ public final class Core {
     private boolean running;
 
     public Core() {
-        this.handler = new CommandHandler();
         this.build = new BuildTree();
+        this.handler = new CommandHandler(this, build);
         this.running = false;
     }
 
