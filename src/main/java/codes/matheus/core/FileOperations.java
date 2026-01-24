@@ -2,6 +2,7 @@ package codes.matheus.core;
 
 import codes.matheus.cli.Command;
 import codes.matheus.datastructures.tree.NaryTree;
+import codes.matheus.util.Colors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -33,7 +34,7 @@ public final class FileOperations {
                     if (targetNode != null) {
                         ls(targetNode);
                     } else {
-                        System.out.print("Error: Path " + arg + " not found");
+                        System.out.print(Colors.format("Error: Path " + arg + " not found", Colors.RED));
                     }
                 }
             }
@@ -53,7 +54,7 @@ public final class FileOperations {
 
         for (@NotNull NaryTree.Node<FileMetadata> child : node.getChildren()) {
             if (child.getValue().isDirectory()) {
-                System.out.print(child.getValue().getName() + "/ ");
+                System.out.print(Colors.format(child.getValue().getName() + "/ ", Colors.WHITE));
             }
         }
     }

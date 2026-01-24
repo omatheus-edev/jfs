@@ -2,6 +2,7 @@ package codes.matheus.core;
 
 import codes.matheus.cli.CommandHandler;
 import codes.matheus.datastructures.tree.NaryTree;
+import codes.matheus.util.Colors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,10 +31,10 @@ public final class Core {
 
     public void run() {
         @NotNull String path = System.getProperty("user.home");
-        System.out.println("Initializing system at: " + path);
+        System.out.println(Colors.format("Initializing system at: " + path, Colors.GREEN));
 
         build.load(path);
-        System.out.println("Success loading tree...");
+        System.out.println(Colors.format("Success loading tree...", Colors.GREEN));
 
         if (build.getTree() != null) {
             @NotNull FileMetadata rootTarget = new FileMetadata(new File(path));

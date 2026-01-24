@@ -16,6 +16,8 @@ public final class CommandHandler {
 
     public void execute(@NotNull String input) {
         @NotNull Command command = Command.create(input);
+        if (command.getType().equals(Command.Type.UNKNOWN)) return;
+
         operations.execute(command);
     }
 }

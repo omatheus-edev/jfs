@@ -1,6 +1,6 @@
 package codes.matheus.cli;
 
-import codes.matheus.exceptions.CommandException;
+import codes.matheus.util.Colors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -160,7 +160,8 @@ public final class Command {
         NAVIGATION,
         IO,
         ENCODING,
-        ANALYSIS;
+        ANALYSIS,
+        UNKNOWN;
 
         public static @NotNull Type fromAction(@NotNull String action) {
             for (@NotNull Map.Entry<Type, List<String>> entry : getCommands().entrySet()) {
@@ -168,7 +169,8 @@ public final class Command {
                     return entry.getKey();
                 }
             }
-            throw new CommandException("Type of command unknown: " + action);
+            System.out.println(Colors.format("Type of command unknown: " + action, Colors.RED));
+            return UNKNOWN;
         }
     }
 }
