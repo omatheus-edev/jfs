@@ -21,28 +21,25 @@ public final class FileOperations {
     public void execute(@NotNull Command command) {
         if (command.getType().equals(Command.Type.NAVIGATION)) {
             switch (command.getAction()) {
-                case "ls" -> {
-                    @NotNull String arg = command.getArg(0);
-                    @Nullable NaryTree.Node<FileMetadata> targetNode;
-
-                    if (arg.isEmpty()) {
-                        targetNode = core.getCurrent();
-                    } else {
-                        targetNode = searchPath(arg);
-                    }
-
-                    if (targetNode != null) {
-                        ls(targetNode);
-                    } else {
-                        System.out.print(Colors.format("Error: Path " + arg + " not found", Colors.RED));
-                    }
-                }
+                case "ls" -> ls(command.getArg(0));
             }
         }
         System.out.println();
     }
 
-    private void ls(@NotNull NaryTree.Node<FileMetadata> node) {
+    private void ls(@NotNull String arg) {
+        @Nullable NaryTree.Node<FileMetadata> targetNode = arg.isEmpty()
+                ? core.getCurrent()
+                : searchPath(arg);
+
+        if (targetNode != null) {
+            handleLs(targetNode);
+        } else {
+            System.out.print(Colors.format("Error: Path " + arg + " not found", Colors.RED));
+        }
+    }
+
+    private void handleLs(@NotNull NaryTree.Node<FileMetadata> node) {
         if (!node.getValue().isDirectory()) {
             return;
         }
