@@ -21,13 +21,16 @@ public final class FileOperations {
     public void execute(@NotNull Command command) {
         if (command.getType().equals(Command.Type.NAVIGATION)) {
             switch (command.getAction()) {
-                case "ls" -> ls(command.getArg(0));
+                case "ls" -> ls(command);
+                case "cd" -> cd(command);
             }
         }
-        System.out.println();
     }
 
-    private void ls(@NotNull String arg) {
+    private void ls(@NotNull Command command) {
+        if (command.hasAnyFlag()) return;
+
+        @NotNull String arg = command.getArg(0);
         @Nullable NaryTree.Node<FileMetadata> targetNode = arg.isEmpty()
                 ? core.getCurrent()
                 : searchPath(arg);
@@ -37,6 +40,7 @@ public final class FileOperations {
         } else {
             System.out.print(Colors.format("Error: Path " + arg + " not found", Colors.RED));
         }
+        System.out.println();
     }
 
     private void handleLs(@NotNull NaryTree.Node<FileMetadata> node) {
@@ -46,7 +50,7 @@ public final class FileOperations {
 
         build.fetchChildren(node);
         if (node.getChildren().isEmpty()) {
-            System.out.println("Directory is empty.");
+            System.out.print("Directory is empty.");
         }
 
         for (@NotNull NaryTree.Node<FileMetadata> child : node.getChildren()) {
@@ -68,7 +72,7 @@ public final class FileOperations {
         }
 
         if (target == null) return null;
-        String[] parts = path.split("/");
+        @NotNull String[] parts = path.split("/");
 
         for (@NotNull String part : parts) {
             if (part.isEmpty() || part.equals(".")) continue;
@@ -92,5 +96,25 @@ public final class FileOperations {
         }
 
         return target;
+    }
+
+    private void cd(@NotNull Command command) {
+        if (command.hasAnyFlag()) return;
+
+        if (command.hasAnyArg() && core.getCurrent() != null)  {
+            @Nullable NaryTree.Node<FileMetadata> targetNode = searchPath(command.getArg(0));
+
+            if (targetNode != null && targetNode.getValue().isDirectory()) {
+                core.setCurrent(targetNode);
+            } else {
+                System.out.print(Colors.format("Error: Path " + command.getArg(0) + " not found or is not a directory", Colors.RED));
+            }
+        } else {
+            if (build.getTree() != null) {
+                @NotNull String rootPath = System.getProperty("user.home");
+                @NotNull NaryTree.Node<FileMetadata> root = Objects.requireNonNull(build.getTree().search(new FileMetadata(new File(rootPath))));
+                core.setCurrent(root);
+            }
+        }
     }
 }
