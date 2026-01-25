@@ -5,6 +5,7 @@ import codes.matheus.datastructures.tree.NaryTree;
 import codes.matheus.util.Colors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Range;
 
 import java.io.File;
 import java.util.Objects;
@@ -23,6 +24,8 @@ public final class FileOperations {
             switch (command.getAction()) {
                 case "ls" -> ls(command);
                 case "cd" -> cd(command);
+                case "pwd" -> pwd(command);
+                case "find" -> find(command);
             }
         }
     }
@@ -36,26 +39,107 @@ public final class FileOperations {
                 : searchPath(arg);
 
         if (targetNode != null) {
-            handleLs(targetNode);
+            if (!targetNode.getValue().isDirectory()) {
+                return;
+            }
+
+            build.fetchChildren(targetNode);
+            if (targetNode.getChildren().isEmpty()) {
+                System.out.print("Directory is empty.");
+            }
+
+            for (@NotNull NaryTree.Node<FileMetadata> child : targetNode.getChildren()) {
+                if (child.getValue().isDirectory()) {
+                    System.out.print(Colors.format(child.getValue().getName() + "/ ", Colors.WHITE));
+                }
+            }
         } else {
             System.out.print(Colors.format("Error: Path " + arg + " not found", Colors.RED));
         }
         System.out.println();
     }
 
-    private void handleLs(@NotNull NaryTree.Node<FileMetadata> node) {
-        if (!node.getValue().isDirectory()) {
+    private void cd(@NotNull Command command) {
+        if (command.hasAnyFlag()) return;
+
+        if (command.hasAnyArg() && core.getCurrent() != null)  {
+            @Nullable NaryTree.Node<FileMetadata> targetNode = searchPath(command.getArg(0));
+
+            if (targetNode != null && targetNode.getValue().isDirectory()) {
+                core.setCurrent(targetNode);
+            } else {
+                System.out.print(Colors.format("Error: Path " + command.getArg(0) + " not found or is not a directory", Colors.RED));
+            }
+        } else {
+            if (build.getTree() != null) {
+                @NotNull String rootPath = System.getProperty("user.home");
+                @NotNull NaryTree.Node<FileMetadata> root = Objects.requireNonNull(build.getTree().search(new FileMetadata(new File(rootPath))));
+                core.setCurrent(root);
+            }
+        }
+    }
+
+    private void pwd(@NotNull Command command) {
+        if (command.hasAnyFlag()) return;
+
+        @Nullable NaryTree.Node<FileMetadata> target = core.getCurrent();
+        if (target != null) {
+            System.out.println(Colors.format(target.getValue().getAbsolutePath(), Colors.WHITE));
+        }
+    }
+
+    private void find(@NotNull Command command) {
+        if (!command.hasAnyArg() && !command.hasAnyFlag()) {
+            System.out.print(Colors.format("The command needs arguments and flags", Colors.RED));
             return;
         }
 
-        build.fetchChildren(node);
-        if (node.getChildren().isEmpty()) {
-            System.out.print("Directory is empty.");
+        @Nullable NaryTree.Node<FileMetadata> node = core.getCurrent();
+        if (node == null) return;
+
+        @NotNull String query = command.hasFlag("--name") ? command.getFlag("--name") : command.getArg(0);
+
+        if (query.isEmpty()) {
+            System.out.print(Colors.format("Search query is missing.", Colors.RED));
+            return;
         }
 
-        for (@NotNull NaryTree.Node<FileMetadata> child : node.getChildren()) {
-            if (child.getValue().isDirectory()) {
-                System.out.print(Colors.format(child.getValue().getName() + "/ ", Colors.WHITE));
+        boolean onlyDirs = command.hasFlag("--type") && command.getFlag("--type").equalsIgnoreCase("d");
+        boolean onlyFiles = command.hasFlag("--type") && command.getFlag("--type").equalsIgnoreCase("f");
+        int maxDepth = Integer.MAX_VALUE;
+
+        if (command.hasFlag("--maxdepth")) {
+            try {
+                maxDepth = Integer.parseInt(command.getFlag("--maxdepth"));
+            } catch (NumberFormatException e) {
+                System.out.println(Colors.format("Invalid max depth, using default.", Colors.YELLOW));
+            }
+        }
+
+        System.out.println(Colors.format("Searching for: " + query, Colors.WHITE));
+        searchRec(node, query, onlyDirs, onlyFiles, 0, maxDepth);
+    }
+
+    private void searchRec(@NotNull NaryTree.Node<FileMetadata> current, @NotNull String query, boolean onlyDirs, boolean onlyFiles, @Range(from = 0, to = Integer.MAX_VALUE) int currentDepth, @Range(from = 0, to = Integer.MAX_VALUE) int maxDepth) {
+        if (currentDepth > maxDepth) return;
+
+        build.fetchChildren(current);
+        for (@NotNull NaryTree.Node<FileMetadata> child : current.getChildren()) {
+            @NotNull FileMetadata meta = child.getValue();
+            @NotNull String name = meta.getName();
+
+            if (name.toLowerCase().contains(query)) {
+                boolean matchesType = (!onlyDirs && !onlyFiles) ||
+                        (onlyDirs && meta.isDirectory()) ||
+                        (onlyFiles && !meta.isDirectory());
+
+                if (matchesType) {
+                    System.out.println(Colors.format("Found: " + meta.getAbsolutePath(), Colors.GREEN));
+                }
+            }
+
+            if (meta.isDirectory()) {
+                searchRec(child, query, onlyDirs, onlyFiles, currentDepth + 1, maxDepth);
             }
         }
     }
@@ -96,25 +180,5 @@ public final class FileOperations {
         }
 
         return target;
-    }
-
-    private void cd(@NotNull Command command) {
-        if (command.hasAnyFlag()) return;
-
-        if (command.hasAnyArg() && core.getCurrent() != null)  {
-            @Nullable NaryTree.Node<FileMetadata> targetNode = searchPath(command.getArg(0));
-
-            if (targetNode != null && targetNode.getValue().isDirectory()) {
-                core.setCurrent(targetNode);
-            } else {
-                System.out.print(Colors.format("Error: Path " + command.getArg(0) + " not found or is not a directory", Colors.RED));
-            }
-        } else {
-            if (build.getTree() != null) {
-                @NotNull String rootPath = System.getProperty("user.home");
-                @NotNull NaryTree.Node<FileMetadata> root = Objects.requireNonNull(build.getTree().search(new FileMetadata(new File(rootPath))));
-                core.setCurrent(root);
-            }
-        }
     }
 }
