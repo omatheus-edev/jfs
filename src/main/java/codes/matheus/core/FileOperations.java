@@ -16,11 +16,13 @@ import java.util.function.Consumer;
 public final class FileOperations {
     private final @NotNull Core core;
     private final @NotNull BuildTree build;
+    private final @NotNull FileAnalyzer analyzer;
     private final @NotNull Map<String, Consumer<Command>> actions = new HashMap<>();
 
     public FileOperations(@NotNull Core core, @NotNull BuildTree build) {
         this.core = core;
         this.build = build;
+        this.analyzer = new FileAnalyzer();
         registerActions();
     }
 
@@ -33,6 +35,7 @@ public final class FileOperations {
 
         // analysis
         actions.put("stats", this::stats);
+        actions.put("analyze", this::analyze);
     }
 
     public void execute(@NotNull Command command) {
@@ -144,11 +147,7 @@ public final class FileOperations {
     }
 
     private void stats(@NotNull Command command) {
-        if (core.getCurrent() == null) return;
-        if (command.hasAnyFlag()) {
-            System.out.print(Colors.format("The command don't needs flags", Colors.RED));
-            return;
-        }
+        if (!FileAnalyzer.validate(core.getCurrent(), command)) return;
 
         @Nullable NaryTree.Node<FileMetadata> target = command.hasAnyArg()
                 ? searchPath(command.getArg(0))
@@ -168,7 +167,50 @@ public final class FileOperations {
             build.fetchChildren(target);
             System.out.println("Children count: " + target.getChildren().size());
         } else {
-            System.out.println("Size: " + meta.getSize());
+            System.out.println("Size: " + analyzer.formatSize(meta.getSize()));
+        }
+    }
+
+    private void analyze(@NotNull Command command) {
+        if (!FileAnalyzer.validate(core.getCurrent(), command)) return;
+
+        @Nullable NaryTree.Node<FileMetadata> target = command.hasAnyArg()
+                ? searchPath(command.getArg(0))
+                : core.getCurrent();
+
+        if (target == null) {
+            System.out.println(Colors.format("Error: path not found", Colors.RED));
+            return;
+        }
+
+        System.out.println(Colors.format("Analyzing: " + target.getValue().getAbsolutePath(), Colors.CYAN));
+        @NotNull FileAnalyzer.Result result = new FileAnalyzer.Result();
+        analysisRec(target, result);
+
+        System.out.println(Colors.format("\n--- Analysis Results ---", Colors.YELLOW));
+        System.out.println("Total Size:  " + analyzer.formatSize(result.getTotalSize()));
+        System.out.println("Files:       " + result.getFileCount());
+        System.out.println("Directories: " + result.getDirCount());
+        System.out.println("\nExtensions:");
+        result.getExtensionMap().forEach((ext, count) ->
+                System.out.println(" ." + ext + ": " + count));
+        System.out.println(Colors.format("-----------------------", Colors.YELLOW));
+    }
+
+    private void analysisRec(@NotNull NaryTree.Node<FileMetadata> node, @NotNull FileAnalyzer.Result result) {
+        build.fetchChildren(node);
+        for (@NotNull NaryTree.Node<FileMetadata> child : node.getChildren()) {
+            @NotNull FileMetadata meta = child.getValue();
+
+            if (meta.isDirectory()) {
+                result.addDirectory();
+            } else {
+                @NotNull String name = meta.getName();
+                @NotNull String ext = name.contains(".")
+                        ? name.substring(name.lastIndexOf(".") + 1).toLowerCase()
+                        : "no-ext";
+                result.addFile(meta.getSize(), ext);
+            }
         }
     }
 
