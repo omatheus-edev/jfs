@@ -56,6 +56,7 @@ public final class FileOperations {
 
         if (targetNode != null) {
             if (!targetNode.getValue().isDirectory()) {
+                System.out.println(Colors.format("Error: Path " + command.getArg(0) + " is not a directory", Colors.RED));
                 return;
             }
 
@@ -87,7 +88,7 @@ public final class FileOperations {
             if (targetNode != null && targetNode.getValue().isDirectory()) {
                 core.setCurrent(targetNode);
             } else {
-                System.out.print(Colors.format("Error: Path " + command.getArg(0) + " not found or is not a directory", Colors.RED));
+                System.out.println(Colors.format("Error: Path " + command.getArg(0) + " not found or is not a directory", Colors.RED));
             }
         } else {
             if (build.getTree() != null) {
@@ -145,27 +146,30 @@ public final class FileOperations {
     private void stats(@NotNull Command command) {
         if (core.getCurrent() == null) return;
         if (command.hasAnyFlag()) {
-            System.out.print(Colors.format("The command don't needs arguments and flags", Colors.RED));
+            System.out.print(Colors.format("The command don't needs flags", Colors.RED));
             return;
         }
 
-        @NotNull FileMetadata meta = core.getCurrent().getValue();
+        @Nullable NaryTree.Node<FileMetadata> target = command.hasAnyArg()
+                ? searchPath(command.getArg(0))
+                : core.getCurrent();
+
+        if (target == null) {
+            System.out.println(Colors.format("Error: path not found", Colors.RED));
+            return;
+        }
+
+        @NotNull FileMetadata meta = target.getValue();
         System.out.println(Colors.format("--- Statistics: " + meta.getName() + " ---", Colors.CYAN));
         System.out.println("Type: " + (meta.isDirectory() ? "Directory" : "File"));
         System.out.println("Path: " + meta.getAbsolutePath());
 
         if (meta.isDirectory()) {
-            System.out.println("Children count: " + core.getCurrent().getChildren().size());
+            build.fetchChildren(target);
+            System.out.println("Children count: " + target.getChildren().size());
         } else {
-            System.out.println("Size: " + formatSize(meta.getSize()));
+            System.out.println("Size: " + meta.getSize());
         }
-    }
-
-    private @NotNull String formatSize(long bytes) {
-        if (bytes < 1024) return bytes + " B";
-        int exp = (int) (Math.log(bytes) / Math.log(1024));
-        String pre = "KMGTPE".charAt(exp-1) + "";
-        return String.format("%.1f %sB", bytes / Math.pow(1024, exp), pre);
     }
 
     private void searchRec(@NotNull NaryTree.Node<FileMetadata> current, @NotNull String query, boolean onlyDirs, boolean onlyFiles, @Range(from = 0, to = Integer.MAX_VALUE) int currentDepth, @Range(from = 0, to = Integer.MAX_VALUE) int maxDepth) {
@@ -206,7 +210,8 @@ public final class FileOperations {
         if (target == null) return null;
         @NotNull String[] parts = path.split("/");
 
-        for (@NotNull String part : parts) {
+        for (int i = 0; i < parts.length; i++) {
+            @NotNull String part = parts[i];
             if (part.isEmpty() || part.equals(".")) continue;
             if (part.equals("..")) {
                 continue;
@@ -221,9 +226,14 @@ public final class FileOperations {
                 }
             }
 
-            if (next == null || !next.getValue().isDirectory()) {
+            if (next == null) {
                 return null;
             }
+
+            if (i < parts.length - 1 && !next.getValue().isDirectory()) {
+                return null;
+            }
+
             target = next;
         }
 
