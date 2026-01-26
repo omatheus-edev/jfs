@@ -8,30 +8,46 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Range;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 public final class FileOperations {
     private final @NotNull Core core;
     private final @NotNull BuildTree build;
+    private final @NotNull Map<String, Consumer<Command>> actions = new HashMap<>();
 
     public FileOperations(@NotNull Core core, @NotNull BuildTree build) {
         this.core = core;
         this.build = build;
+        registerActions();
+    }
+
+    private void registerActions() {
+        // Navigations
+        actions.put("ls", this::ls);
+        actions.put("cd", this::cd);
+        actions.put("pwd", this::pwd);
+        actions.put("find", this::find);
+
+        // analysis
+        actions.put("stats", this::stats);
     }
 
     public void execute(@NotNull Command command) {
-        if (command.getType().equals(Command.Type.NAVIGATION)) {
-            switch (command.getAction()) {
-                case "ls" -> ls(command);
-                case "cd" -> cd(command);
-                case "pwd" -> pwd(command);
-                case "find" -> find(command);
-            }
+        @Nullable Consumer<Command> action = actions.get(command.getAction());
+
+        if (action != null) {
+            action.accept(command);
         }
     }
 
     private void ls(@NotNull Command command) {
-        if (command.hasAnyFlag()) return;
+        if (command.hasAnyFlag()) {
+            System.out.print(Colors.format("The command don't needs arguments and flags", Colors.RED));
+            return;
+        }
 
         @NotNull String arg = command.getArg(0);
         @Nullable NaryTree.Node<FileMetadata> targetNode = arg.isEmpty()
@@ -60,7 +76,10 @@ public final class FileOperations {
     }
 
     private void cd(@NotNull Command command) {
-        if (command.hasAnyFlag()) return;
+        if (command.hasAnyFlag()) {
+            System.out.print(Colors.format("The command don't needs arguments and flags", Colors.RED));
+            return;
+        }
 
         if (command.hasAnyArg() && core.getCurrent() != null)  {
             @Nullable NaryTree.Node<FileMetadata> targetNode = searchPath(command.getArg(0));
@@ -80,7 +99,10 @@ public final class FileOperations {
     }
 
     private void pwd(@NotNull Command command) {
-        if (command.hasAnyFlag()) return;
+        if (command.hasAnyFlag()) {
+            System.out.print(Colors.format("The command don't needs arguments and flags", Colors.RED));
+            return;
+        }
 
         @Nullable NaryTree.Node<FileMetadata> target = core.getCurrent();
         if (target != null) {
@@ -118,6 +140,32 @@ public final class FileOperations {
 
         System.out.println(Colors.format("Searching for: " + query, Colors.WHITE));
         searchRec(node, query, onlyDirs, onlyFiles, 0, maxDepth);
+    }
+
+    private void stats(@NotNull Command command) {
+        if (core.getCurrent() == null) return;
+        if (command.hasAnyFlag()) {
+            System.out.print(Colors.format("The command don't needs arguments and flags", Colors.RED));
+            return;
+        }
+
+        @NotNull FileMetadata meta = core.getCurrent().getValue();
+        System.out.println(Colors.format("--- Statistics: " + meta.getName() + " ---", Colors.CYAN));
+        System.out.println("Type: " + (meta.isDirectory() ? "Directory" : "File"));
+        System.out.println("Path: " + meta.getAbsolutePath());
+
+        if (meta.isDirectory()) {
+            System.out.println("Children count: " + core.getCurrent().getChildren().size());
+        } else {
+            System.out.println("Size: " + formatSize(meta.getSize()));
+        }
+    }
+
+    private @NotNull String formatSize(long bytes) {
+        if (bytes < 1024) return bytes + " B";
+        int exp = (int) (Math.log(bytes) / Math.log(1024));
+        String pre = "KMGTPE".charAt(exp-1) + "";
+        return String.format("%.1f %sB", bytes / Math.pow(1024, exp), pre);
     }
 
     private void searchRec(@NotNull NaryTree.Node<FileMetadata> current, @NotNull String query, boolean onlyDirs, boolean onlyFiles, @Range(from = 0, to = Integer.MAX_VALUE) int currentDepth, @Range(from = 0, to = Integer.MAX_VALUE) int maxDepth) {
