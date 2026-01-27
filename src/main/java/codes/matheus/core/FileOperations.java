@@ -36,6 +36,9 @@ public final class FileOperations {
         // analysis
         actions.put("stats", this::stats);
         actions.put("analyze", this::analyze);
+
+        // io
+        actions.put("mkdir", this::mkdir);
     }
 
     public void execute(@NotNull Command command) {
@@ -195,6 +198,30 @@ public final class FileOperations {
         result.getExtensionMap().forEach((ext, count) ->
                 System.out.println(" ." + ext + ": " + count));
         System.out.println(Colors.format("-----------------------", Colors.YELLOW));
+    }
+
+    private void mkdir(@NotNull Command command) {
+        if (!FileAnalyzer.validate(core.getCurrent(), command)) return;
+
+        @NotNull String path = command.getArg(0);
+        @NotNull File target = new File(core.getCurrent().getValue().getAbsolutePath(), path);
+
+        if (target.exists()) {
+            System.out.println(Colors.format("Error: path already exists", Colors.RED));
+            return;
+        }
+        if (target.mkdirs()) {
+            @NotNull String parent = target.getParent();
+            @Nullable NaryTree.Node<FileMetadata> parentNode = searchPath(parent);
+
+            if (parentNode != null) {
+                parentNode.getChildren().clear();
+                build.fetchChildren(parentNode);
+            }
+            System.out.println(Colors.format("Directory structure created: " + path, Colors.GREEN));
+        } else {
+            System.out.println(Colors.format("Error: failed to create structure", Colors.RED));
+        }
     }
 
     private void analysisRec(@NotNull NaryTree.Node<FileMetadata> node, @NotNull FileAnalyzer.Result result) {
