@@ -7,7 +7,10 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Range;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -39,6 +42,8 @@ public final class FileOperations {
 
         // io
         actions.put("mkdir", this::mkdir);
+        actions.put("rm", this::rm);
+        actions.put("print", this::print);
     }
 
     public void execute(@NotNull Command command) {
@@ -224,6 +229,68 @@ public final class FileOperations {
         }
     }
 
+    private void rm(@NotNull Command command) {
+        if (!FileAnalyzer.validate(core.getCurrent(), command)) return;
+
+        @NotNull String path = command.getArg(0);
+        @NotNull File target = new File(core.getCurrent().getValue().getAbsolutePath(), path);
+        if (!target.exists()) {
+            System.out.println(Colors.format("Error: path not found", Colors.RED));
+            return;
+        }
+
+        @NotNull String parentPath = ".";
+        if (path.contains("/")) {
+            parentPath = path.substring(0, path.lastIndexOf("/"));
+        }
+
+        @Nullable NaryTree.Node<FileMetadata> parentNode = searchPath(parentPath);
+        deleteRec(target);
+        if (parentNode != null) {
+            parentNode.clear();
+            build.fetchChildren(parentNode);
+            System.out.println(Colors.format("Removed: " + path, Colors.GREEN));
+        } else {
+            core.getCurrent().clear();
+            build.fetchChildren(core.getCurrent());
+        }
+    }
+
+    private void print(@NotNull Command command) {
+        if (!FileAnalyzer.validate(core.getCurrent(), command)) return;
+
+        @NotNull String path = command.getArg(0);
+        @NotNull File target = new File(core.getCurrent().getValue().getAbsolutePath(), path);
+        if (!target.exists()) {
+            System.out.println(Colors.format("Error: path not found", Colors.RED));
+            return;
+        } if (target.isDirectory()) {
+            System.out.println(Colors.format("Error: path " + path + "is directory", Colors.RED));
+            return;
+        }
+
+        try (@NotNull BufferedReader reader = new BufferedReader(new FileReader(target))) {
+            @NotNull String line;
+            System.out.println(Colors.format("--- Content of: " + path + " ---", Colors.CYAN));
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+            System.out.println(Colors.format("---------------------------", Colors.CYAN));
+        } catch (IOException e) {
+            System.out.println(Colors.format("Error reading the file: " + e.getLocalizedMessage(), Colors.RED));
+        }
+    }
+
+    private void deleteRec(@NotNull File file) {
+        @NotNull File[] children = file.listFiles();
+        if (children != null) {
+            for (@NotNull File child : children) {
+                deleteRec(child);
+            }
+        }
+        file.delete();
+    }
+
     private void analysisRec(@NotNull NaryTree.Node<FileMetadata> node, @NotNull FileAnalyzer.Result result) {
         build.fetchChildren(node);
         for (@NotNull NaryTree.Node<FileMetadata> child : node.getChildren()) {
@@ -289,7 +356,7 @@ public final class FileOperations {
             build.fetchChildren(target);
             @Nullable NaryTree.Node<FileMetadata> next = null;
             for (@NotNull NaryTree.Node<FileMetadata> child : target.getChildren()) {
-                if (child.getValue().getName().equalsIgnoreCase(part)) {
+                if (child.getValue().getName().equals(part)) {
                     next = child;
                     break;
                 }
