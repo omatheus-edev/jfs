@@ -60,13 +60,24 @@ public final class FileOperations {
         }
     }
 
+    private @NotNull String joinArgs(@NotNull Command command) {
+        @NotNull StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < command.getArgsSize(); i++) {
+            builder.append(command.getArg(i));
+            if (i < command.getArgsSize() - 1) {
+                builder.append(" ");
+            }
+        }
+        return builder.toString();
+    }
+
     private void ls(@NotNull Command command) {
         if (command.hasAnyFlag()) {
             System.out.print(Colors.format("The command don't needs arguments and flags", Colors.RED));
             return;
         }
 
-        @NotNull String arg = command.getArg(0);
+        @NotNull String arg = joinArgs(command);
         @Nullable NaryTree.Node<FileMetadata> targetNode = arg.isEmpty()
                 ? core.getCurrent()
                 : searchPath(arg);
@@ -100,12 +111,13 @@ public final class FileOperations {
         }
 
         if (command.hasAnyArg() && core.getCurrent() != null)  {
-            @Nullable NaryTree.Node<FileMetadata> targetNode = searchPath(command.getArg(0));
+            @NotNull String path = joinArgs(command);
+            @Nullable NaryTree.Node<FileMetadata> targetNode = searchPath(path);
 
             if (targetNode != null && targetNode.getValue().isDirectory()) {
                 core.setCurrent(targetNode);
             } else {
-                System.out.println(Colors.format("Error: Path " + command.getArg(0) + " not found or is not a directory", Colors.RED));
+                System.out.println(Colors.format("Error: Path " + path + " not found or is not a directory", Colors.RED));
             }
         } else {
             if (build.getTree() != null) {
@@ -221,7 +233,7 @@ public final class FileOperations {
             return;
         }
 
-        @NotNull String path = command.getArg(0);
+        @NotNull String path = joinArgs(command);
         @NotNull File target = new File(core.getCurrent().getValue().getAbsolutePath(), path);
 
         if (target.exists()) {
@@ -252,7 +264,7 @@ public final class FileOperations {
             return;
         }
 
-        @NotNull String path = command.getArg(0);
+        @NotNull String path = joinArgs(command);
         @NotNull File target = new File(core.getCurrent().getValue().getAbsolutePath(), path);
         if (!target.exists()) {
             System.out.println(Colors.format("Error: path not found", Colors.RED));
@@ -286,7 +298,7 @@ public final class FileOperations {
             return;
         }
 
-        @NotNull String path = command.getArg(0);
+        @NotNull String path = joinArgs(command);
         @NotNull File target = new File(core.getCurrent().getValue().getAbsolutePath(), path);
         if (!target.exists()) {
             System.out.println(Colors.format("Error: path not found", Colors.RED));
@@ -326,7 +338,7 @@ public final class FileOperations {
             return;
         }
 
-        @NotNull String parentPath = origin.getParent();
+        @NotNull String parentPath = origin.getParent() != null ? origin.getParent() : ".";
         @NotNull File target = new File(parentPath, newName);
         @Nullable NaryTree.Node<FileMetadata> parentNode = searchPath(parentPath);
 
@@ -357,8 +369,8 @@ public final class FileOperations {
 
         @NotNull String originPath = command.getArg(0);
         @NotNull String targetPath = command.getArg(1);
-        @NotNull File origin = new File(core.getCurrent().getValue().getAbsolutePath(), originPath);
-        @NotNull File target = new File(core.getCurrent().getValue().getAbsolutePath(), targetPath);
+        @NotNull File origin = originPath.startsWith("/") ? new File(originPath) : new File(core.getCurrent().getValue().getAbsolutePath(), originPath);
+        @NotNull File target = targetPath.startsWith("/") ? new File(targetPath) : new File(core.getCurrent().getValue().getAbsolutePath(), targetPath);
         @NotNull File file = new File(target, origin.getName());
 
         if (!origin.exists()) {
@@ -482,10 +494,21 @@ public final class FileOperations {
             @NotNull String part = parts[i];
             if (part.isEmpty() || part.equals(".")) continue;
             if (part.equals("..")) {
+                @NotNull String current = Objects.requireNonNull(target).getValue().getAbsolutePath();
+                @NotNull String parentPath = new File(current).getParent();
+
+                if (parentPath != null) {
+                    @NotNull String rootPath = System.getProperty("user.home");
+                    if (!parentPath.startsWith(rootPath)) {
+                        parentPath = rootPath;
+                    }
+
+                    target = Objects.requireNonNull(build.getTree()).search(new FileMetadata(new File(parentPath)));
+                }
                 continue;
             }
 
-            build.fetchChildren(target);
+            build.fetchChildren(Objects.requireNonNull(target));
             @Nullable NaryTree.Node<FileMetadata> next = null;
             for (@NotNull NaryTree.Node<FileMetadata> child : target.getChildren()) {
                 if (child.getValue().getName().equals(part)) {

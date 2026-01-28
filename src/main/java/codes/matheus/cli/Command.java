@@ -129,17 +129,17 @@ public final class Command {
         }
 
         private static @NotNull CommandParsed parse(@NotNull String input) {
+            if (input.trim().isEmpty()) {
+                return new CommandParsed("", new ArrayList<>(), new HashMap<>());
+            }
+
             @NotNull List<String> tokens = new ArrayList<>();
             @NotNull Matcher matcher = PATTERN.matcher(input);
 
             while (matcher.find()) {
-                if (matcher.group(1) != null) {
-                    tokens.add(matcher.group(1));
-                } else if (matcher.group(2) != null) {
-                    tokens.add(matcher.group(2));
-                } else {
-                        tokens.add(matcher.group());
-                }
+                @NotNull String match = matcher.group(1) != null ? matcher.group(1) :
+                        (matcher.group(2) != null ? matcher.group(2) : matcher.group());
+                tokens.add(match);
             }
 
             @NotNull String action = tokens.remove(0).toLowerCase();
