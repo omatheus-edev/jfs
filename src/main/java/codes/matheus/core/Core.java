@@ -29,6 +29,10 @@ public final class Core {
         this.current = current;
     }
 
+    public void setRunning(boolean running) {
+        this.running = running;
+    }
+
     public void run() {
         @NotNull String path = System.getProperty("user.home");
         System.out.println(Colors.format("Initializing system at: " + path, Colors.GREEN));
@@ -48,11 +52,6 @@ public final class Core {
             @NotNull String prompt = (current != null) ? current.getValue().getName() : "shell";
             System.out.print(prompt + " > ");
             @NotNull String input = scanner.nextLine();
-
-            if (input.equalsIgnoreCase("exit")) {
-                running = false;
-            }
-
             handler.execute(input);
         }
         scanner.close();

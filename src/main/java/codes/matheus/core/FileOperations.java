@@ -46,6 +46,10 @@ public final class FileOperations {
         actions.put("print", this::print);
         actions.put("rename", this::rename);
         actions.put("mv", this::mv);
+
+        // system
+        actions.put("exit", this::exit);
+        actions.put("clear", this::clear);
     }
 
     public void execute(@NotNull Command command) {
@@ -385,6 +389,27 @@ public final class FileOperations {
                 build.fetchChildren(nodeTarget);
             }
             System.out.println(Colors.format("Moved successfully", Colors.GREEN));
+        }
+    }
+
+    private void exit(@NotNull Command command) {
+        if (command.getAction().equals("exit")) {
+            core.setRunning(false);
+        }
+    }
+
+    private void clear(@NotNull Command command) {
+        try {
+            @NotNull String os = System.getProperty("os.name");
+
+            if (os.contains("Windows")) {
+                new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
+            } else {
+                System.out.print("\033[H\033[2J");
+                System.out.flush();
+            }
+        } catch (Exception e) {
+            for (int i = 0; i < 50; i++) System.out.println();
         }
     }
 
