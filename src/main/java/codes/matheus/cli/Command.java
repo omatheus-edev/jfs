@@ -25,9 +25,9 @@ public final class Command {
     }
 
     static {
-        commands.put(Type.SYSTEM,     List.of("login", "exit", "open", "help", "clear"));
+        commands.put(Type.SYSTEM,     List.of("exit", "clear"));
         commands.put(Type.NAVIGATION, List.of("cd", "ls", "find", "pwd"));
-        commands.put(Type.IO,         List.of("mkdir", "cp", "mv", "rm", "print", "rename", "bulk-rename"));
+        commands.put(Type.IO,         List.of("mkdir", "mv", "rm", "print", "rename"));
         commands.put(Type.ENCODING,   List.of("crypto", "zip", "unzip"));
         commands.put(Type.ANALYSIS,   List.of("analyze", "stats"));
     }
@@ -70,6 +70,10 @@ public final class Command {
 
     public @NotNull String getFlag(@NotNull String key) {
         return (flags != null) ? flags.get(key) : "";
+    }
+
+    public int getArgsSize() {
+        return args != null ? args.size() : -1;
     }
 
     public boolean hasAnyArg() {

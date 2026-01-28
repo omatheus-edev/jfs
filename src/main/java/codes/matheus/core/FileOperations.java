@@ -44,6 +44,8 @@ public final class FileOperations {
         actions.put("mkdir", this::mkdir);
         actions.put("rm", this::rm);
         actions.put("print", this::print);
+        actions.put("rename", this::rename);
+        actions.put("mv", this::mv);
     }
 
     public void execute(@NotNull Command command) {
@@ -206,7 +208,14 @@ public final class FileOperations {
     }
 
     private void mkdir(@NotNull Command command) {
-        if (!FileAnalyzer.validate(core.getCurrent(), command)) return;
+        if (core.getCurrent() == null) return;
+        if (command.hasAnyFlag()) {
+            System.out.print(Colors.format("The command don't needs flags", Colors.RED));
+            return;
+        } if (!command.hasAnyArg()) {
+            System.out.print(Colors.format("The command needs arg", Colors.RED));
+            return;
+        }
 
         @NotNull String path = command.getArg(0);
         @NotNull File target = new File(core.getCurrent().getValue().getAbsolutePath(), path);
@@ -230,7 +239,14 @@ public final class FileOperations {
     }
 
     private void rm(@NotNull Command command) {
-        if (!FileAnalyzer.validate(core.getCurrent(), command)) return;
+        if (core.getCurrent() == null) return;
+        if (command.hasAnyFlag()) {
+            System.out.print(Colors.format("The command don't needs flags", Colors.RED));
+            return;
+        } if (!command.hasAnyArg()) {
+            System.out.print(Colors.format("The command needs arg", Colors.RED));
+            return;
+        }
 
         @NotNull String path = command.getArg(0);
         @NotNull File target = new File(core.getCurrent().getValue().getAbsolutePath(), path);
@@ -257,7 +273,14 @@ public final class FileOperations {
     }
 
     private void print(@NotNull Command command) {
-        if (!FileAnalyzer.validate(core.getCurrent(), command)) return;
+        if (core.getCurrent() == null) return;
+        if (command.hasAnyFlag()) {
+            System.out.print(Colors.format("The command don't needs flags", Colors.RED));
+            return;
+        } if (!command.hasAnyArg()) {
+            System.out.print(Colors.format("The command needs arg", Colors.RED));
+            return;
+        }
 
         @NotNull String path = command.getArg(0);
         @NotNull File target = new File(core.getCurrent().getValue().getAbsolutePath(), path);
@@ -278,6 +301,90 @@ public final class FileOperations {
             System.out.println(Colors.format("---------------------------", Colors.CYAN));
         } catch (IOException e) {
             System.out.println(Colors.format("Error reading the file: " + e.getLocalizedMessage(), Colors.RED));
+        }
+    }
+
+    private void rename(@NotNull Command command) {
+        if (core.getCurrent() == null) return;
+        if (command.hasAnyFlag()) {
+            System.out.println(Colors.format("The command don't needs flags", Colors.RED));
+            return;
+        } if (!command.hasAnyArg()) {
+            System.out.println(Colors.format("The command needs arg", Colors.RED));
+            return;
+        }
+
+        @NotNull String path = command.getArg(0);
+        @NotNull String newName = command.getArg(1);
+        @NotNull File origin = new File(core.getCurrent().getValue().getAbsolutePath(), path);
+        if (!origin.exists()) {
+            System.out.println(Colors.format("The file or folder doesn't exists", Colors.RED));
+            return;
+        }
+
+        @NotNull String parentPath = origin.getParent();
+        @NotNull File target = new File(parentPath, newName);
+        @Nullable NaryTree.Node<FileMetadata> parentNode = searchPath(parentPath);
+
+        if (origin.renameTo(target)) {
+            if (parentNode != null) {
+                parentNode.clear();
+                build.fetchChildren(parentNode);
+                System.out.println(Colors.format("Renamed successfully: " + path + " -> " + newName, Colors.GREEN));
+            } else {
+                core.getCurrent().clear();
+                build.fetchChildren(core.getCurrent());
+                System.out.println(Colors.format("Renamed successfully (view refreshed)", Colors.GREEN));
+            }
+        } else {
+            System.out.println(Colors.format("Error: Could not rename. Check if target name already exists.", Colors.RED));
+        }
+    }
+
+    private void mv(@NotNull Command command) {
+        if (core.getCurrent() == null) return;
+        if (command.hasAnyFlag()) {
+            System.out.println(Colors.format("The command don't needs flags", Colors.RED));
+            return;
+        } if (!command.hasAnyArg() || command.getArgsSize() < 2) {
+            System.out.println(Colors.format("Usage: mv <source> <target_directory>", Colors.RED));
+            return;
+        }
+
+        @NotNull String originPath = command.getArg(0);
+        @NotNull String targetPath = command.getArg(1);
+        @NotNull File origin = new File(core.getCurrent().getValue().getAbsolutePath(), originPath);
+        @NotNull File target = new File(core.getCurrent().getValue().getAbsolutePath(), targetPath);
+        @NotNull File file = new File(target, origin.getName());
+
+        if (!origin.exists()) {
+            System.out.println(Colors.format("Source file not found", Colors.RED));
+            return;
+        }
+
+        if (origin.renameTo(file)) {
+            @NotNull String parentOriginPath = ".";
+            if (originPath.contains("/")) {
+                parentOriginPath = originPath.substring(0, originPath.lastIndexOf("/"));
+            }
+
+            @NotNull String parentTargetPath = targetPath;
+            @Nullable NaryTree.Node<FileMetadata> nodeOrigin = searchPath(parentOriginPath);
+            @Nullable NaryTree.Node<FileMetadata> nodeTarget = searchPath(parentTargetPath);
+
+            if (nodeOrigin != null) {
+                nodeOrigin.clear();
+                build.fetchChildren(nodeOrigin);
+            } else {
+                core.getCurrent().clear();
+                build.fetchChildren(core.getCurrent());
+            }
+
+            if (nodeTarget != null) {
+                nodeTarget.clear();
+                build.fetchChildren(nodeTarget);
+            }
+            System.out.println(Colors.format("Moved successfully", Colors.GREEN));
         }
     }
 
