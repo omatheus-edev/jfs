@@ -28,7 +28,7 @@ public final class Command {
         commands.put(Type.SYSTEM,     List.of("exit", "clear"));
         commands.put(Type.NAVIGATION, List.of("cd", "ls", "find", "pwd"));
         commands.put(Type.IO,         List.of("mkdir", "mv", "rm", "print", "rename"));
-        commands.put(Type.ENCODING,   List.of("crypto", "zip", "unzip"));
+        commands.put(Type.ENCODING,   List.of("crypto", "zip", "unzip", "hash"));
         commands.put(Type.ANALYSIS,   List.of("analyze", "stats"));
     }
 

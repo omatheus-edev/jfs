@@ -2,6 +2,7 @@ package codes.matheus.core;
 
 import codes.matheus.cli.Command;
 import codes.matheus.datastructures.tree.NaryTree;
+import codes.matheus.encoding.HashEncoding;
 import codes.matheus.encoding.ZipEncoding;
 import codes.matheus.exceptions.EncodingException;
 import codes.matheus.util.Colors;
@@ -23,6 +24,7 @@ public final class FileOperations {
     private final @NotNull BuildTree build;
     private final @NotNull FileAnalyzer analyzer;
     private final @NotNull ZipEncoding zipper;
+    private final @NotNull HashEncoding hash;
     private final @NotNull Map<String, Consumer<Command>> actions = new HashMap<>();
 
     public FileOperations(@NotNull Core core, @NotNull BuildTree build) {
@@ -30,6 +32,7 @@ public final class FileOperations {
         this.build = build;
         this.analyzer = new FileAnalyzer();
         this.zipper = new ZipEncoding();
+        this.hash = new HashEncoding();
         registerActions();
     }
 
@@ -58,6 +61,7 @@ public final class FileOperations {
         //encoding
         actions.put("zip", this::zip);
         actions.put("unzip", this::unzip);
+        actions.put("hash", this::hash);
     }
 
     public void execute(@NotNull Command command) {
@@ -502,6 +506,27 @@ public final class FileOperations {
         } catch (Exception e) {
             System.out.println(Colors.format("Error during unzip: " + e.getMessage(), Colors.RED));
         }
+    }
+
+    private void hash(@NotNull Command command) {
+        if (!command.hasAnyArg()) {
+            System.out.println(Colors.format("The command needs args", Colors.RED));
+            return;
+        } else if (command.hasAnyFlag()) {
+            System.out.println(Colors.format("The command don't needs flags", Colors.RED));
+            return;
+        }
+
+        @NotNull String path = joinArgs(command);
+        @Nullable NaryTree.Node<FileMetadata> target = searchPath(path);
+        if (target == null) {
+            System.out.println(Colors.format("Error: .zip file not found", Colors.RED));
+            return;
+        }
+
+        @NotNull File file = new File(target.getValue().getAbsolutePath());
+        @NotNull String result = hash.encode(file);
+        System.out.println(Colors.format("SHA-256: " + result, Colors.GREEN));
     }
 
     private void deleteRec(@NotNull File file) {
