@@ -2,6 +2,8 @@ package codes.matheus.core;
 
 import codes.matheus.cli.Command;
 import codes.matheus.datastructures.tree.NaryTree;
+import codes.matheus.encoding.ZipEncoding;
+import codes.matheus.exceptions.EncodingException;
 import codes.matheus.util.Colors;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -20,12 +22,14 @@ public final class FileOperations {
     private final @NotNull Core core;
     private final @NotNull BuildTree build;
     private final @NotNull FileAnalyzer analyzer;
+    private final @NotNull ZipEncoding zipper;
     private final @NotNull Map<String, Consumer<Command>> actions = new HashMap<>();
 
     public FileOperations(@NotNull Core core, @NotNull BuildTree build) {
         this.core = core;
         this.build = build;
         this.analyzer = new FileAnalyzer();
+        this.zipper = new ZipEncoding();
         registerActions();
     }
 
@@ -50,6 +54,10 @@ public final class FileOperations {
         // system
         actions.put("exit", this::exit);
         actions.put("clear", this::clear);
+
+        //encoding
+        actions.put("zip", this::zip);
+        actions.put("unzip", this::unzip);
     }
 
     public void execute(@NotNull Command command) {
@@ -422,6 +430,77 @@ public final class FileOperations {
             }
         } catch (Exception e) {
             for (int i = 0; i < 50; i++) System.out.println();
+        }
+    }
+
+    private void zip(@NotNull Command command) {
+        if (!command.hasAnyArg()) {
+            System.out.println(Colors.format("The command needs args", Colors.RED));
+            return;
+        } else if (command.hasAnyFlag()) {
+            System.out.println(Colors.format("The command don't needs flags", Colors.RED));
+            return;
+        }
+
+        @NotNull String path = joinArgs(command);
+        @Nullable NaryTree.Node<FileMetadata> target = searchPath(path);
+
+        if (target == null) {
+            System.out.println(Colors.format("Error: path not found", Colors.RED));
+            return;
+        }
+
+        @NotNull File source = new File(target.getValue().getAbsolutePath());
+        try {
+            System.out.println(Colors.format("Encoding...", Colors.CYAN));
+            @NotNull File zip = zipper.encode(source);
+            @Nullable NaryTree.Node<FileMetadata> current = core.getCurrent();
+
+            if (current != null) {
+                current.clear();
+                build.fetchChildren(current);
+            }
+            System.out.println(Colors.format("Success: " + zip.getName() + " created", Colors.GREEN));
+        } catch (EncodingException e) {
+            System.out.println(Colors.format("Error in process of encode", Colors.RED));
+        }
+    }
+
+    private void unzip(@NotNull Command command) {
+        if (!command.hasAnyArg()) {
+            System.out.println(Colors.format("The command needs args", Colors.RED));
+            return;
+        } else if (command.hasAnyFlag()) {
+            System.out.println(Colors.format("The command don't needs flags", Colors.RED));
+            return;
+        }
+
+        @NotNull String path = joinArgs(command);
+        @Nullable NaryTree.Node<FileMetadata> target = searchPath(path);
+        if (target == null) {
+            System.out.println(Colors.format("Error: .zip file not found", Colors.RED));
+            return;
+        }
+
+        @NotNull File source = new File(target.getValue().getAbsolutePath());
+        if (source.isDirectory()) {
+            System.out.println(Colors.format("Error: Target is a directory, not a zip file", Colors.RED));
+            return;
+        }
+
+        try {
+            System.out.println(Colors.format("Decoding (Unzipping)...", Colors.CYAN));
+            @NotNull File unzip = zipper.decode(source);
+            @Nullable NaryTree.Node<FileMetadata> current = core.getCurrent();
+
+            if (current != null) {
+                current.clear();
+                build.fetchChildren(current);
+            }
+
+            System.out.println(Colors.format("Success: " + unzip.getName() + " the file was decoded correctly.", Colors.GREEN));
+        } catch (Exception e) {
+            System.out.println(Colors.format("Error during unzip: " + e.getMessage(), Colors.RED));
         }
     }
 
