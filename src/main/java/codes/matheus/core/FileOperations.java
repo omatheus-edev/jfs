@@ -2,6 +2,7 @@ package codes.matheus.core;
 
 import codes.matheus.cli.Command;
 import codes.matheus.datastructures.tree.NaryTree;
+import codes.matheus.encoding.CryptoEncoding;
 import codes.matheus.encoding.HashEncoding;
 import codes.matheus.encoding.ZipEncoding;
 import codes.matheus.exceptions.EncodingException;
@@ -17,6 +18,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Scanner;
 import java.util.function.Consumer;
 
 public final class FileOperations {
@@ -62,6 +64,7 @@ public final class FileOperations {
         actions.put("zip", this::zip);
         actions.put("unzip", this::unzip);
         actions.put("hash", this::hash);
+        actions.put("crypto", this::crypto);
     }
 
     public void execute(@NotNull Command command) {
@@ -527,6 +530,71 @@ public final class FileOperations {
         @NotNull File file = new File(target.getValue().getAbsolutePath());
         @NotNull String result = hash.encode(file);
         System.out.println(Colors.format("SHA-256: " + result, Colors.GREEN));
+    }
+
+    private void crypto(@NotNull Command command) {
+        if (!(command.hasAnyArg() || command.hasAnyFlag())) {
+            System.out.println(Colors.format("The command needs args", Colors.RED));
+            return;
+        } else if (command.hasFlag("--encrypt") && command.hasFlag("--decrypt")) {
+            System.out.println(Colors.format("Error: Use either --encrypt or --decrypt, not both.", Colors.RED));
+            return;
+        }
+
+        @NotNull String path = joinArgs(command);
+        @Nullable NaryTree.Node<FileMetadata> target = searchPath(path);
+        if (target == null) {
+            System.out.println(Colors.format("Error: Path not found.", Colors.RED));
+            return;
+        }
+
+        @NotNull File source = new File(target.getValue().getAbsolutePath());
+
+        if (source.isDirectory()) {
+            System.out.println(Colors.format("Error: Cannot encrypt/decrypt a directory.", Colors.RED));
+            return;
+        }
+
+        @NotNull String password;
+        if (System.console() != null) {
+            System.out.print(Colors.format("Enter password: ", Colors.PURPLE));
+            password = new String(System.console().readPassword());
+        } else {
+            System.out.print(Colors.format("Enter password (IDE mode): ", Colors.PURPLE));
+            password = new Scanner(System.in).nextLine();
+        }
+
+        if (password.isBlank()) {
+            System.out.println(Colors.format("Error: Password cannot be empty.", Colors.RED));
+            return;
+        }
+
+        @NotNull CryptoEncoding crypto = new CryptoEncoding(password);
+        try {
+            if (command.hasFlag("--encrypt")) {
+                System.out.println(Colors.format("Encrypting... ", Colors.CYAN));
+                crypto.encode(source);
+            } else if (command.hasFlag("--decrypt")) {
+                if (!source.getName().endsWith(".enc")) {
+                    System.out.println(Colors.format("Warning: This file doesn't have .enc extension.", Colors.YELLOW));
+                }
+                System.out.println(Colors.format("Decrypting... ", Colors.CYAN));
+                crypto.decode(source);
+            } else {
+                System.out.println(Colors.format("Error: Missing --encrypt or --decrypt flag.", Colors.RED));
+                return;
+            }
+
+            @Nullable NaryTree.Node<FileMetadata> current = core.getCurrent();
+            if (current != null) {
+                current.clear();
+                build.fetchChildren(current);
+            }
+
+            System.out.println(Colors.format("Success: Operation completed.", Colors.GREEN));
+        } catch (Exception e) {
+            System.out.println(Colors.format("Crypto Error: " + e.getMessage(), Colors.RED));
+        }
     }
 
     private void deleteRec(@NotNull File file) {
