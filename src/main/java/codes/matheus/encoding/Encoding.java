@@ -4,6 +4,6 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 
-public interface Encoding<T> {
+public sealed interface Encoding<T> permits CryptoEncoding, HashEncoding, ZipEncoding{
     @NotNull T encode(@NotNull File file);
 }

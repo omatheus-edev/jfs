@@ -27,7 +27,7 @@ public final class ZipEncoding implements Encoding<File> {
     }
 
     public @NotNull File decode(@NotNull File file) {
-        @NotNull File unzip = new File(file.getAbsolutePath().replace(".zip", ""));
+        @NotNull File unzip = file.getParentFile();
         if (!unzip.exists()) {
             unzip.mkdirs();
         }
